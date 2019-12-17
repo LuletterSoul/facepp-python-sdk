@@ -19,6 +19,7 @@ from PythonSDK.compat import (basestring, str, numeric_types, enc, choose_bounda
                               Request, urlopen, HTTPError, URLError)
 
 import ssl
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 __all__ = ['File', 'APIError', 'API']
@@ -26,12 +27,11 @@ __all__ = ['File', 'APIError', 'API']
 DEBUG_LEVEL = 1
 
 # 添加API Key API Secret
-API_KEY = "XXX"
-API_SECRET = "XXX"
+API_KEY = "FjfhM_3RgVq-cHfei0fmdv3o_RLvZqHv"
+API_SECRET = "DtWoQJjo2nZ8xD8iiWVNO3bGsxhRuX__"
 
 
 class File(object):
-
     """an object representing a local file"""
     path = None
     content = None
@@ -93,8 +93,8 @@ class API(object):
             or socket error
         :param retry_delay: time to sleep before retrying
         """
-        if len(API_KEY)==0 or len(API_SECRET)==0:
-            print('\n'+'请在'+os.path.realpath(__file__)+'文件中填写正确的API_KEY和API_SECRET'+'\n')
+        if len(API_KEY) == 0 or len(API_SECRET) == 0:
+            print('\n' + '请在' + os.path.realpath(__file__) + '文件中填写正确的API_KEY和API_SECRET' + '\n')
             exit(1)
 
         self.key = API_KEY
@@ -145,7 +145,7 @@ class _APIProxy(object):
 
     _urlbase = None
 
-    def __init__(self, api,  prefix, path):
+    def __init__(self, api, prefix, path):
         _setup_apiobj(self, api, prefix, path)
 
     def __call__(self, *args, **kargs):
@@ -209,7 +209,6 @@ class _APIProxy(object):
 
 
 class _MultiPartForm(object):
-
     """Accumulate the data to be used when posting a form."""
 
     def __init__(self):
@@ -288,6 +287,12 @@ _APIS = [
             '/face/analyze',
             '/face/getdetail',
             '/face/setuserid',
+        ],
+    },
+    {
+        'prefix': 'facepp/v1/face',
+        'paths': [
+            '/thousandlandmark',
         ],
     },
     {
