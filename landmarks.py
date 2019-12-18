@@ -35,7 +35,7 @@ def printFuctionTitle(title):
     return "\n" + "-" * 60 + title + "-" * 60;
 
 
-def generate_landmarks(file_lists, output: Path):
+def generate_dense_landmarks(file_lists, output: Path):
     with multiprocessing.Pool() as p:
         for f in file_lists:
             if f.is_dir():
@@ -44,20 +44,38 @@ def generate_landmarks(file_lists, output: Path):
                 imgs = list(f.glob('*.png'))
                 for img in imgs:
                     # handle_img(img, output_dir)
-                    p.apply_async(handle_img, (img, output_dir,))
+                    p.apply_async(handle_img_dense, (img, output_dir,))
                     # return
                     # task = threading.Thread(target=handle_img, args=(img, output_dir,))
                     # task.start()
                     # threads.append(task)
             elif f.is_file():
-                p.apply_async(handle_img, (f, output,))
+                p.apply_async(handle_img_dense, (f, output,))
         p.close()
         p.join()
 
         # return
 
 
-def handle_img(img, output_dir):
+def generate_sparse_landmarks(file_lists, output: Path, return_landmark=1):
+    with multiprocessing.Pool() as p:
+        for f in file_lists:
+            if f.is_dir():
+                output_dir = output / f.name
+                output_dir.mkdir(parents=True, exist_ok=True)
+                imgs = list(f.glob('*.png'))
+                for img in imgs:
+                    p.apply_async(handle_img_sparse, (img, output_dir, return_landmark,))
+            elif f.is_file():
+                p.apply_async(handle_img_sparse, (f, output, return_landmark,))
+                # handle_img_sparse(f, output)
+        p.close()
+        p.join()
+
+        # return
+
+
+def handle_img_dense(img, output_dir):
     not_fetch = True
     res = None
     output_landmarks_dir = output_dir / 'landmarks'
@@ -94,11 +112,51 @@ def handle_img(img, output_dir):
     fw.close()
 
 
+def handle_img_sparse(img, output_dir, return_landmark=1):
+    not_fetch = True
+    res = None
+    output_landmarks_dir = output_dir / 'landmarks'
+    output_json_dir = output_dir / 'results'
+    output_landmarks_dir.mkdir(exist_ok=True, parents=True)
+    output_json_dir.mkdir(exist_ok=True, parents=True)
+
+    while not_fetch:
+        try:
+            res = api.detect(image_file=File(img),
+                             return_landmark=return_landmark, return_attributes=None)
+            not_fetch = False
+            # print(res)
+        except Exception as e:
+            pass
+    if 'faces' not in res:
+        return None
+    if 'landmark' not in res['faces'][0]:
+        return None
+    landmarks = res['faces'][0]['landmark']
+    landmarks_list = []
+    print(img)
+    # print_result(printFuctionTitle("人脸关键点检测"), landmarks)
+    # for region, landmarks_dict in landmarks.items():
+    for k, landmark in landmarks.items():
+        landmarks_list.append([landmark['x'], landmark['y']])
+    landmarks_list = np.array(landmarks_list)
+    img_name = os.path.splitext(os.path.basename(img))[0]
+    txt_name = img_name + '.txt'
+    np.savetxt(str(output_landmarks_dir / txt_name), landmarks_list, fmt="%d")
+
+    output_json = output_json_dir / (img_name + '.json')
+    fw = open(output_json, 'w')
+    fw.write(json.dumps(res, indent=4))
+    fw.close()
+
+
 # 初始化对象，进行api的调用工作
 api = API()
 
 dataset_name = 'CelebA'
-output_name = 'CelebA-landmarks'
+output_name = 'CelebA-landmarks-83'
+# dataset_name = 'AF_dataset'
+# output_name = 'AF-landmarks-83'
 dataset = Path(dataset_name)
 
 output = Path(output_name)
@@ -106,4 +164,5 @@ output.mkdir(parents=True, exist_ok=True)
 
 file_lists = list(dataset.glob('*'))
 
-generate_landmarks(file_lists, output)
+# generate_dense_landmarks(file_lists, output)
+generate_sparse_landmarks(file_lists, output)
